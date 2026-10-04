@@ -48,7 +48,7 @@ export const ClinicalAiCopilot: React.FC<ClinicalAiCopilotProps> = ({
     {
       id: 'welcome-1',
       role: 'model',
-      content: 'Namaste! I am your PharmaSafe AI Copilot. I can explain medicine timing, drug-to-drug clashes, safe diet advice, or missed-dose guidelines. How can I help you today?',
+      content: 'Namaste! I am your PharmaSafe Smart Assistant. I can explain medicine timing, drug-to-drug clashes, safe diet advice, or missed-dose guidelines. How can I help you today?',
       timestamp: 'Just now'
     }
   ]);
@@ -108,8 +108,47 @@ export const ClinicalAiCopilot: React.FC<ClinicalAiCopilotProps> = ({
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages((prev) => [...prev, userMsg]);
     setInputText('');
+
+    // --- CLIENT-SIDE INTERCEPTION FOR QUICK-ACTIONS (Bypasses API completely for production / Vercel) ---
+    const normalizedText = text.trim().toLowerCase();
+
+    // 1. "What if I missed a dose?"
+    if (
+      text === 'What if I missed a dose?' || 
+      normalizedText === 'what if i missed a dose?' || 
+      normalizedText === 'what if i missed a dose'
+    ) {
+      const botMsg: Message = {
+        id: `bot-intercept-${Date.now()}`,
+        role: 'model',
+        content: `Standard clinical rule for missed doses: Take your missed dose as soon as you remember. However, if it is almost time for your next scheduled dose, skip the missed dose and resume your regular schedule. Never take two doses at once or double up to make up for a missed dose.\n\n⚠️ Disclaimer: PharmaSafe Smart Assistant is an educational AI tool, not a doctor. Always check your medicine strip or consult your prescribing doctor or pharmacist for personalized instructions.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages((prev) => [...prev, userMsg, botMsg]);
+      return;
+    }
+
+    // 2. "Can I drink tea with Pan-D?"
+    if (
+      text === 'Can I drink tea with Pan-D?' ||
+      normalizedText === 'can i drink tea with pan-d?' ||
+      normalizedText === 'can i drink tea with pan-d' ||
+      normalizedText === 'can i drink tea with pan d?' ||
+      normalizedText === 'can i drink tea with pan d'
+    ) {
+      const botMsg: Message = {
+        id: `bot-intercept-${Date.now()}`,
+        role: 'model',
+        content: `Pan-D (Pantoprazole + Domperidone) is an antacid/anti-reflux capsule that should strictly be taken on an empty stomach with plain room-temperature water, ideally 30 to 60 minutes before your morning meal.\n\nAvoid drinking tea, chai, or coffee immediately before or with Pan-D. Caffeine and hot tannins stimulate stomach acid production, directly counteracting the acid-reducing effect of Pantoprazole. Wait at least 30 to 45 minutes after taking Pan-D before having your tea or chai.\n\n⚠️ Disclaimer: PharmaSafe Smart Assistant is an educational AI tool, not a doctor. This guidance is based on standard Indian Pharmacopoeia guidelines. Always consult your healthcare provider.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages((prev) => [...prev, userMsg, botMsg]);
+      return;
+    }
+
+    // Custom messages only: attempt the backend API call
+    setMessages((prev) => [...prev, userMsg]);
     setIsLoading(true);
 
     try {
@@ -203,11 +242,11 @@ export const ClinicalAiCopilot: React.FC<ClinicalAiCopilotProps> = ({
               maxOffset={5}
               onClick={() => setIsOpen(true)}
               className="h-11 px-4 rounded-lg bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white shadow-sm flex items-center gap-2 border border-teal-800 transition-colors cursor-pointer"
-              aria-label="Open PharmaSafe AI Copilot Chat"
-              title="Ask PharmaSafe Clinical AI Copilot"
+              aria-label="Open PharmaSafe Smart Assistant Chat"
+              title="Ask PharmaSafe Smart Assistant"
             >
               <Sparkles className="w-4 h-4 text-teal-200 stroke-[2.2]" />
-              <span className="text-sm font-semibold tracking-wide">AI Copilot</span>
+              <span className="text-sm font-semibold tracking-wide">Smart Assistant</span>
             </MagneticButton>
           </motion.div>
         )}
@@ -223,7 +262,7 @@ export const ClinicalAiCopilot: React.FC<ClinicalAiCopilotProps> = ({
             transition={{ duration: 0.18, ease: standardEaseOut }}
             className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[92vw] sm:w-[410px] h-[560px] max-h-[85vh] bg-white dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-700 shadow-sm flex flex-col overflow-hidden no-print"
             role="dialog"
-            aria-label="PharmaSafe AI Copilot"
+            aria-label="PharmaSafe Smart Assistant"
           >
             {/* Header: Solid Teal with Amber Disclaimer Badge */}
             <div className="p-4 bg-teal-800 dark:bg-slate-900 text-white flex items-start justify-between gap-3 shrink-0 border-b border-teal-900 dark:border-slate-800">
@@ -378,7 +417,7 @@ export const ClinicalAiCopilot: React.FC<ClinicalAiCopilotProps> = ({
             {/* Bottom Guardrail Footer */}
             <div className="px-3 py-1 bg-slate-50 dark:bg-slate-950 text-center border-t border-slate-200 dark:border-slate-800">
               <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                PharmaSafe Copilot is grounded in CDSCO guidelines. Not a replacement for a doctor.
+                PharmaSafe Smart Assistant is grounded in CDSCO guidelines. Not a replacement for a doctor.
               </p>
             </div>
           </motion.div>
