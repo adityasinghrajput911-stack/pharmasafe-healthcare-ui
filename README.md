@@ -5,7 +5,7 @@ PharmaSafe is a progressive web application designed for the Indian healthcare c
 Built with a focus on elderly accessibility, the app features a highly professional, flat enterprise UI with premium Framer Motion micro-interactions.
 
 ## 🚀 Live Demo
-[Insert Link to your Vercel/Netlify deployment here later]
+[https://pharmasafe-healthcare-ui.vercel.app/]
 *(Add a 10-second GIF here showing your UI in action)*
 
 ## ✨ Core Features
