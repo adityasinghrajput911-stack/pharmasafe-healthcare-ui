@@ -53,6 +53,17 @@
   background: #94A3B8;
 }
 
+/* Accessible standard scrollbar hiding for swipeable pill rows */
+.scrollbar-hide::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide,
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Snappy 150ms-200ms ease-out transitions */
 .slide-up-enter {
   opacity: 0;

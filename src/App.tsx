@@ -14,6 +14,7 @@ import { SmartDietCompanion } from './components/SmartDietCompanion';
 import { FriendlyGuide } from './components/FriendlyGuide';
 import { SymptomReliefModule } from './components/SymptomReliefModule';
 import { ClinicalAiCopilot } from './components/ClinicalAiCopilot';
+import { Footer } from './components/Footer';
 import { SpotlightCard } from './components/SpotlightCard';
 import { MagneticButton } from './components/MagneticButton';
 import { checkMultiMedicineClashes } from './data/drugClashEngine';
@@ -440,20 +441,8 @@ export default function App() {
           </motion.div>
         )}
 
-        {/* Clinical Digital Health Footer */}
-        <footer className="pt-8 pb-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-4 font-medium text-slate-700 dark:text-slate-300">
-            <div>
-              PharmaSafe Clinical Pharmacology & Healthcare Decision Support
-            </div>
-            <div>
-              Compliant with WCAG 2.1 AA Accessibility Guidelines
-            </div>
-          </div>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Medical Disclaimer: PharmaSafe provides pharmacology reference information synthesized from standard clinical pharmacology guidelines for patient and caregiver education. It is not a replacement for professional medical advice, clinical diagnosis, or personalized treatment. Always consult your prescribing physician or licensed pharmacist before discontinuing or altering any medication schedule.
-          </p>
-        </footer>
+        {/* Clinical Digital Health Footer with Relocated Medical Trust Badges */}
+        <Footer />
 
       </main>
 
