@@ -233,7 +233,7 @@ export const ClinicalAiCopilot: React.FC<ClinicalAiCopilotProps> = ({
                     <Sparkles className="w-4 h-4 stroke-[2.5]" />
                   </div>
                   <h3 className="text-base font-bold tracking-tight truncate">
-                    PharmaSafe AI Copilot
+                    PharmaSafe Smart Assistant
                   </h3>
                 </div>
 
