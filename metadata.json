@@ -1,0 +1,6 @@
+{
+  "name": "PharmaSafe - Indian Pharmacy Drug & Diet Safety Companion",
+  "description": "Evidence-based clinical decision support and drug-nutrient interaction safety system for Indian pharmacy medications with zero-hallucination pharmacological cross-checking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
