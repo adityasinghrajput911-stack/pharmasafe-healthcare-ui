@@ -34,6 +34,10 @@ export const SymptomReliefModule: React.FC<SymptomReliefModuleProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSymptomId, setSelectedSymptomId] = useState<string | null>(null);
+  const [selectedTreatment, setSelectedTreatment] = useState<{ type: 'otc' | 'remedy'; index: number }>({
+    type: 'otc',
+    index: 0
+  });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,6 +45,16 @@ export const SymptomReliefModule: React.FC<SymptomReliefModuleProps> = ({
   const selectedSymptom: SymptomEntry | null = selectedSymptomId
     ? (SYMPTOM_DATABASE.find(s => s.id === selectedSymptomId) || null)
     : null;
+
+  const activeOtc =
+    selectedSymptom && selectedTreatment.type === 'otc'
+      ? selectedSymptom.otcMedicines[selectedTreatment.index] || selectedSymptom.otcMedicines[0]
+      : null;
+
+  const activeRemedy =
+    selectedSymptom && selectedTreatment.type === 'remedy'
+      ? selectedSymptom.homeRemedies[selectedTreatment.index] || selectedSymptom.homeRemedies[0]
+      : null;
 
   // Filtered symptoms based on search query
   const filteredSymptoms = SYMPTOM_DATABASE.filter(s => {
@@ -69,6 +83,7 @@ export const SymptomReliefModule: React.FC<SymptomReliefModuleProps> = ({
       setSelectedSymptomId(null);
     } else {
       setSelectedSymptomId(symptomId);
+      setSelectedTreatment({ type: 'otc', index: 0 });
     }
     setSearchQuery('');
     setIsDropdownOpen(false);
@@ -329,6 +344,70 @@ export const SymptomReliefModule: React.FC<SymptomReliefModuleProps> = ({
               </div>
             </motion.div>
 
+            {/* ESTIMATED SYMPTOM RESOLUTION EFFICACY (%) PROGRESS PANEL */}
+            {(activeOtc || activeRemedy) && (
+              <motion.section
+                variants={editorialItem}
+                aria-label="Estimated Symptom Resolution Efficacy"
+                className="p-4 sm:p-5 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-300 dark:border-teal-800 space-y-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300 block">
+                      Selected {activeOtc ? 'OTC Medicine' : 'Home Remedy'} • Quantitative Efficacy Meter
+                    </span>
+                    <h4 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                      Estimated Symptom Resolution Efficacy (%) — {activeOtc ? activeOtc.name : activeRemedy?.title}
+                    </h4>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="px-3 py-1 rounded-md bg-teal-700 text-white font-mono text-xs sm:text-sm font-extrabold">
+                      {activeOtc ? activeOtc.efficacyRangeLabel : `~${activeRemedy?.efficacyPercent}%`}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-teal-200 dark:border-teal-800 text-teal-900 dark:text-teal-200 text-xs font-semibold">
+                      {activeOtc ? activeOtc.onsetWindow : (activeRemedy?.onsetWindow || 'within 15–30 minutes')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Animated Progress Bar */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <span>Estimated Symptom Resolution Efficacy</span>
+                    <span className="font-mono font-bold text-teal-800 dark:text-teal-300">
+                      {activeOtc ? activeOtc.efficacyPercent : activeRemedy?.efficacyPercent}%
+                    </span>
+                  </div>
+                  <div className="w-full h-3 rounded-full bg-white dark:bg-slate-900 border border-teal-200 dark:border-teal-800 overflow-hidden">
+                    <motion.div
+                      key={`${selectedSymptom.id}-${selectedTreatment.type}-${selectedTreatment.index}`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${activeOtc ? activeOtc.efficacyPercent : activeRemedy?.efficacyPercent || 0}%` }}
+                      transition={{ duration: 0.45, ease: standardEaseOut }}
+                      className={`h-full rounded-full ${
+                        activeOtc ? 'bg-teal-600' : 'bg-emerald-600'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Clinical Mechanism Note */}
+                <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-teal-200/80 dark:border-teal-800/80 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
+                  <strong className="text-teal-800 dark:text-teal-300">Clinical Mechanism Note: </strong>
+                  {activeOtc ? activeOtc.clinicalMechanismNote : activeRemedy?.efficacyMechanismSummary}
+                  {activeRemedy && (
+                    <span className="block text-xs text-slate-600 dark:text-slate-400 mt-1">
+                      {activeRemedy.scienceRationale}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Tip: Tap any OTC medicine or Home Remedy card below to compare its estimated symptom resolution efficacy and molecular mechanism.
+                </p>
+              </motion.section>
+            )}
+
             {/* SECTION A: Safe OTC Medicines */}
             <motion.section variants={editorialItem} aria-labelledby="section-a-heading" className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -341,7 +420,7 @@ export const SymptomReliefModule: React.FC<SymptomReliefModuleProps> = ({
                   </h4>
                 </div>
                 <span className="text-xs font-bold uppercase tracking-wider text-teal-800 dark:text-teal-400 bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded-md border border-teal-200 dark:border-teal-800">
-                  Universal Generic Medications
+                  Tap Any Card to Inspect Efficacy
                 </span>
               </div>
 
@@ -350,93 +429,168 @@ export const SymptomReliefModule: React.FC<SymptomReliefModuleProps> = ({
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                {selectedSymptom.otcMedicines.map((med, index) => (
-                  <div 
-                    key={index}
-                    className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col justify-between space-y-3"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="px-2.5 py-0.5 bg-white dark:bg-slate-900 border border-teal-200 dark:border-slate-700 text-teal-800 dark:text-teal-300 text-xs font-semibold rounded-md">
-                          {med.badge}
-                        </span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          e.g., {med.brandExamples}
-                        </span>
+                {selectedSymptom.otcMedicines.map((med, index) => {
+                  const isCardSelected = selectedTreatment.type === 'otc' && selectedTreatment.index === index;
+                  return (
+                    <div 
+                      key={index}
+                      onClick={() => setSelectedTreatment({ type: 'otc', index })}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedTreatment({ type: 'otc', index });
+                        }
+                      }}
+                      className={`p-4 rounded-lg border flex flex-col justify-between space-y-3 cursor-pointer transition-all ${
+                        isCardSelected
+                          ? 'bg-teal-50/70 dark:bg-teal-950/30 border-teal-600 ring-1 ring-teal-600 shadow-sm'
+                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-teal-400'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="px-2.5 py-0.5 bg-white dark:bg-slate-900 border border-teal-200 dark:border-slate-700 text-teal-800 dark:text-teal-300 text-xs font-semibold rounded-md">
+                            {med.badge}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-teal-700 text-white font-mono text-xs font-bold">
+                            {med.efficacyRangeLabel} Relief
+                          </span>
+                        </div>
+
+                        {/* Pill name */}
+                        <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                          <Pill className="w-4 h-4 text-teal-700 dark:text-teal-400 shrink-0" />
+                          <span>{med.name}</span>
+                        </div>
+
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          Indian / Global Brands: <strong className="text-slate-700 dark:text-slate-300">{med.brandExamples}</strong>
+                        </div>
+
+                        {/* Compact Inline Efficacy Bar */}
+                        <div className="space-y-1 pt-0.5">
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-teal-900 dark:text-teal-300">
+                            <span>Estimated Efficacy ({med.onsetWindow})</span>
+                            <span className="font-mono font-bold">{med.efficacyPercent}%</span>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-teal-600 transition-all duration-300"
+                              style={{ width: `${med.efficacyPercent}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <p className="text-xs sm:text-sm font-normal text-slate-700 dark:text-slate-300 leading-relaxed">
+                          {med.purpose}
+                        </p>
+
+                        <div className="p-2.5 bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">
+                          <strong className="text-teal-700 dark:text-teal-400 font-semibold">Dosage &amp; Safety Rule: </strong>
+                          {med.dosageAndTiming}
+                        </div>
                       </div>
 
-                      {/* Pill name */}
-                      <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                        <Pill className="w-4 h-4 text-teal-700 dark:text-teal-400 shrink-0" />
-                        <span>{med.name}</span>
-                      </div>
-
-                      <p className="text-xs sm:text-sm font-normal text-slate-700 dark:text-slate-300 leading-relaxed">
-                        {med.purpose}
-                      </p>
-
-                      <div className="p-2.5 bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">
-                        <strong className="text-teal-700 dark:text-teal-400 font-semibold">Dosage & Safety Rule: </strong>
-                        {med.dosageAndTiming}
-                      </div>
+                      {/* Option to check food interaction in PharmaSafe if medication matches database */}
+                      {med.linkedDrugId && onCheckDrugInteraction && (
+                        <motion.button
+                          whileTap={tactileTapPhysics}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCheckDrugInteraction(med.linkedDrugId!);
+                          }}
+                          className="w-full min-h-[38px] px-3 py-1.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-teal-800 dark:text-teal-300 font-semibold text-xs rounded-md border border-teal-300 dark:border-teal-700 flex items-center justify-center gap-1.5 transition-colors mt-1"
+                        >
+                          <span>Check Food Interactions for {med.linkedDrugId.split('/')[0]}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </motion.button>
+                      )}
                     </div>
-
-                    {/* Option to check food interaction in PharmaSafe if medication matches database */}
-                    {med.linkedDrugId && onCheckDrugInteraction && (
-                      <motion.button
-                        whileTap={tactileTapPhysics}
-                        type="button"
-                        onClick={() => onCheckDrugInteraction(med.linkedDrugId!)}
-                        className="w-full min-h-[38px] px-3 py-1.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-teal-800 dark:text-teal-300 font-semibold text-xs rounded-md border border-teal-300 dark:border-teal-700 flex items-center justify-center gap-1.5 transition-colors mt-1"
-                      >
-                        <span>Check Food Interactions for {med.linkedDrugId.split('/')[0]}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </motion.button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </motion.section>
 
             {/* SECTION B: Home & Natural Remedies */}
             <motion.section variants={editorialItem} aria-labelledby="section-b-heading" className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-emerald-700 text-white flex items-center justify-center font-bold text-xs">
-                  B
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-md bg-emerald-700 text-white flex items-center justify-center font-bold text-xs">
+                    B
+                  </div>
+                  <h4 id="section-b-heading" className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                    No medicines available? Try this instantly:
+                  </h4>
                 </div>
-                <h4 id="section-b-heading" className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                  No medicines available? Try this instantly:
-                </h4>
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                  Tap Any Remedy to Compare Efficacy
+                </span>
               </div>
 
               <div className="p-5 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg border border-emerald-300 dark:border-emerald-800 text-slate-900 dark:text-slate-100 space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                   <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                  <span>Scientifically Backed Home & Natural Care</span>
+                  <span>Scientifically Backed Home &amp; Natural Care</span>
                 </div>
 
                 <div className="space-y-2.5">
-                  {selectedSymptom.homeRemedies.map((remedy, idx) => (
-                    <div 
-                      key={idx} 
-                      className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800/80 space-y-1"
-                    >
-                      <div className="flex items-center gap-2 font-bold text-sm sm:text-base text-emerald-900 dark:text-emerald-300">
-                        <span className="w-5 h-5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center shrink-0">
-                          {idx + 1}
-                        </span>
-                        <span>{remedy.title}</span>
-                      </div>
+                  {selectedSymptom.homeRemedies.map((remedy, idx) => {
+                    const isRemedySelected = selectedTreatment.type === 'remedy' && selectedTreatment.index === idx;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedTreatment({ type: 'remedy', index: idx })}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedTreatment({ type: 'remedy', index: idx });
+                          }
+                        }}
+                        className={`bg-white dark:bg-slate-900 p-4 rounded-lg border space-y-2 cursor-pointer transition-all ${
+                          isRemedySelected
+                            ? 'border-emerald-600 ring-1 ring-emerald-600 shadow-sm'
+                            : 'border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-500'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 font-bold text-sm sm:text-base text-emerald-900 dark:text-emerald-300">
+                            <span className="w-5 h-5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <span>{remedy.title}</span>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded bg-emerald-600 text-white font-mono text-xs font-bold">
+                            ~{remedy.efficacyPercent}% Relief Efficacy
+                          </span>
+                        </div>
 
-                      <p className="text-sm sm:text-base font-medium text-slate-900 dark:text-slate-100 leading-relaxed pl-7">
-                        {remedy.action}
-                      </p>
+                        <p className="text-sm sm:text-base font-medium text-slate-900 dark:text-slate-100 leading-relaxed pl-7">
+                          {remedy.action}
+                        </p>
 
-                      <div className="pl-7 text-xs text-emerald-800 dark:text-emerald-400 font-semibold pt-0.5">
-                        Biochemical Rationale: {remedy.scienceRationale}
+                        {/* Inline Efficacy Progress Bar */}
+                        <div className="pl-7 space-y-1">
+                          <div className="w-full h-2 rounded-full bg-emerald-50 dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-emerald-600 transition-all duration-300"
+                              style={{ width: `${remedy.efficacyPercent}%` }}
+                            />
+                          </div>
+                          <div className="text-xs font-bold text-teal-800 dark:text-teal-300">
+                            Efficacy &amp; Mechanism: {remedy.efficacyMechanismSummary}
+                          </div>
+                          <div className="text-xs text-emerald-800 dark:text-emerald-400 font-semibold">
+                            Biochemical Rationale: {remedy.scienceRationale}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </motion.section>

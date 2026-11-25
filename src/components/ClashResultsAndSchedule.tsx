@@ -11,6 +11,7 @@ import {
   Check, 
   Copy, 
   Printer, 
+  Download,
   Sparkles, 
   Pill, 
   ChevronDown, 
@@ -22,6 +23,7 @@ import {
 import { standardEaseOut, editorialRevealContainer, editorialItem, tactileTapPhysics } from '../utils/motion';
 import type { MultiMedicineAnalysisResult } from '../types';
 import { InternetCrossCheck } from './InternetCrossCheck';
+import { downloadMedicationReportPdf } from '../utils/pdfReportGenerator';
 
 interface ClashResultsAndScheduleProps {
   analysis: MultiMedicineAnalysisResult;
@@ -35,6 +37,7 @@ export const ClashResultsAndSchedule: React.FC<ClashResultsAndScheduleProps> = (
   onNavigateToDietGuide
 }) => {
   const [copied, setCopied] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const [isSosOpen, setIsSosOpen] = useState(false);
 
   const isCritical = analysis.maxSeverity === 'CRITICAL';
@@ -67,6 +70,12 @@ export const ClashResultsAndSchedule: React.FC<ClashResultsAndScheduleProps> = (
     navigator.clipboard.writeText(lines.join('\n'));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadReport = () => {
+    downloadMedicationReportPdf(analysis);
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 2500);
   };
 
   const handlePrint = () => {
@@ -155,12 +164,23 @@ export const ClashResultsAndSchedule: React.FC<ClashResultsAndScheduleProps> = (
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 no-print">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 no-print">
+            <motion.button
+              whileTap={tactileTapPhysics}
+              type="button"
+              onClick={handleDownloadReport}
+              className="min-h-[44px] px-4 text-xs sm:text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 active:bg-teal-900 border border-teal-800 rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              title="Download analyzed medication interaction summary and daily schedule as a PDF document for printing"
+            >
+              {downloaded ? <Check className="w-4 h-4 text-white stroke-[2.5]" /> : <Download className="w-4 h-4 text-white" />}
+              <span>{downloaded ? 'Report Downloaded' : 'Download Report'}</span>
+            </motion.button>
+
             <motion.button
               whileTap={tactileTapPhysics}
               type="button"
               onClick={handleCopySchedule}
-              className="min-h-[44px] px-3.5 text-xs sm:text-sm font-bold text-teal-800 dark:text-teal-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs"
+              className="min-h-[44px] px-3.5 text-xs sm:text-sm font-bold text-teal-800 dark:text-teal-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-teal-600 dark:text-teal-400" />}
               <span>{copied ? 'Copied Timetable!' : 'Copy Timetable'}</span>
@@ -170,13 +190,124 @@ export const ClashResultsAndSchedule: React.FC<ClashResultsAndScheduleProps> = (
               whileTap={tactileTapPhysics}
               type="button"
               onClick={handlePrint}
-              className="min-h-[44px] px-3.5 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs"
+              className="min-h-[44px] px-3.5 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
             >
               <Printer className="w-4 h-4 text-slate-500" />
               <span>Print Schedule</span>
             </motion.button>
           </div>
         </motion.div>
+
+        {/* ============================================================== */}
+        {/* MULTI-DRUG METABOLIC COMPETITION SCORE (Hepatic CYP Clearance) */}
+        {/* ============================================================== */}
+        {analysis.metabolicCompetition && (
+          <motion.section
+            variants={editorialItem}
+            aria-label="Multi-Drug Metabolic Competition Score"
+            className={`rounded-xl p-5 border shadow-sm space-y-4 ${
+              analysis.metabolicCompetition.level === 'HIGH'
+                ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-900'
+                : analysis.metabolicCompetition.level === 'MODERATE'
+                ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-900'
+                : 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
+            }`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-slate-800">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">
+                  Hepatic &amp; Renal Pharmacokinetic Clearance Analysis
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                  Multi-Drug Metabolic Competition Score
+                </h3>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <span
+                  className={`px-3 py-1 rounded-md font-mono text-xs sm:text-sm font-extrabold border ${
+                    analysis.metabolicCompetition.level === 'HIGH'
+                      ? 'bg-rose-600 text-white border-rose-700'
+                      : analysis.metabolicCompetition.level === 'MODERATE'
+                      ? 'bg-amber-600 text-white border-amber-700'
+                      : 'bg-emerald-600 text-white border-emerald-700'
+                  }`}
+                >
+                  Score: {analysis.metabolicCompetition.score} / 100
+                </span>
+                <span className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                  ~{analysis.metabolicCompetition.delayedEliminationPercent}% Delayed Elimination Rate
+                </span>
+              </div>
+            </div>
+
+            {/* Score Progress Meter */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <span>{analysis.metabolicCompetition.headline}</span>
+                <span className="font-mono">{analysis.metabolicCompetition.score}% Competition Load</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, Math.max(4, analysis.metabolicCompetition.score))}%` }}
+                  transition={{ duration: 0.5, ease: standardEaseOut }}
+                  className={`h-full rounded-full ${
+                    analysis.metabolicCompetition.level === 'HIGH'
+                      ? 'bg-rose-600'
+                      : analysis.metabolicCompetition.level === 'MODERATE'
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-600'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Clinical Summary Note */}
+            <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+              <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-relaxed">
+                {analysis.metabolicCompetition.clinicalNote}
+              </p>
+
+              {/* Competing Substrate Pathways */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1">
+                  Competing Clearance Pathways:
+                </span>
+                {analysis.metabolicCompetition.sharedPathways.map((pathway, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-semibold text-teal-800 dark:text-teal-300"
+                  >
+                    {pathway}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Per-pair Hepatic Competition Details */}
+            {analysis.metabolicCompetition.competingPairs.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {analysis.metabolicCompetition.competingPairs.map((pair, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-lg bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-xs space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-2 font-bold text-slate-900 dark:text-slate-100">
+                      <span>{pair.drugA} + {pair.drugB}</span>
+                      <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                        {pair.pathway}
+                      </span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-300 leading-snug">
+                      {pair.delayNote}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.section>
+        )}
 
         {/* ============================================================== */}
         {/* SECTION A: CLASH ALERTS (The Warnings)                         */}
@@ -235,14 +366,48 @@ export const ClashResultsAndSchedule: React.FC<ClashResultsAndScheduleProps> = (
                     {clash.plainExplanation}
                   </p>
 
+                  {/* Quantitative PK Impact & Code-Style Chemical Equation */}
+                  {(clash.bioavailabilityImpactSummary || clash.chemicalEquation) && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-white/90 dark:bg-slate-900/90 border border-rose-200 dark:border-rose-900/60">
+                        <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
+                          {clash.bioavailabilityImpactSummary}
+                        </span>
+                        {typeof clash.bioavailabilityImpactPercent === 'number' && (
+                          <span className={`px-2.5 py-0.5 rounded font-mono text-xs font-extrabold border ${
+                            clash.bioavailabilityImpactPercent < 0
+                              ? 'bg-rose-600 text-white border-rose-700'
+                              : 'bg-red-700 text-white border-red-800'
+                          }`}>
+                            {clash.bioavailabilityImpactPercent > 0 ? '+' : ''}
+                            {clash.bioavailabilityImpactPercent}% {clash.bioavailabilityImpactPercent < 0 ? 'Bioavailability Drop' : 'Kinetic Surge'}
+                          </span>
+                        )}
+                      </div>
+                      {clash.chemicalEquation && (
+                        <div className="rounded-lg bg-slate-950 border border-slate-800 overflow-hidden">
+                          <div className="px-3 py-1.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-400">
+                              Molecular &amp; Chemical Reaction Equation
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">Drug-Drug Stoichiometry</span>
+                          </div>
+                          <pre className="p-3 font-mono text-[11px] sm:text-xs text-emerald-300 whitespace-pre-wrap break-words leading-relaxed">
+                            <code>{clash.chemicalEquation}</code>
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Clinical Why & Actionable Fix */}
                   <div className="mt-3 pt-3 border-t border-rose-200/60 dark:border-rose-900/60 flex flex-col md:flex-row md:items-start justify-between gap-3 text-xs sm:text-sm">
                     <div className="space-y-1 max-w-xl">
                       <span className="font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 text-[11px] block">
-                        Pharmacological Mechanism:
+                        Pharmacological & Molecular Kinetics:
                       </span>
                       <p className="text-slate-700 dark:text-slate-300 font-medium leading-normal">
-                        {clash.clinicalWhy}
+                        {clash.reactionMechanism || clash.clinicalWhy}
                       </p>
                     </div>
 

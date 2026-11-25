@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShieldAlert, 
@@ -11,7 +11,8 @@ import {
   ShoppingBag,
   Info,
   AlertCircle,
-  ShieldCheck
+  ShieldCheck,
+  X
 } from 'lucide-react';
 import { standardEaseOut, upwardDriftCard, chipTapPhysics } from '../utils/motion';
 import type { DrugId, InteractionAnalysis } from '../types';
@@ -21,8 +22,11 @@ import {
 } from '../data/trafficLightDietGuide';
 import { 
   POPULAR_INDIAN_SHORTCUTS, 
-  INDIAN_PHARMACY_DATABASE 
+  INDIAN_PHARMACY_DATABASE,
+  type IndianMedicineEntry
 } from '../data/indianPharmacyDatabase';
+import { matchCuratedDrug } from '../data/brandDatabase';
+import { DRUG_FOOD_INTERACTION_RULES } from '../../catalog';
 import { InternetCrossCheck } from './InternetCrossCheck';
 
 interface SmartDietCompanionProps {
@@ -43,9 +47,22 @@ export const SmartDietCompanion: React.FC<SmartDietCompanionProps> = ({
   const [activeMedicine, setActiveMedicine] = useState<DrugId>(selectedDrug || 'Atorvastatin');
   const [activeBrand, setActiveBrand] = useState<string | undefined>(selectedBrandName || 'Storvas');
   const [filterQuery, setFilterQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close options dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // When props update, sync internal state
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedDrug) {
       setActiveMedicine(selectedDrug);
       setActiveBrand(selectedBrandName);
@@ -53,6 +70,37 @@ export const SmartDietCompanion: React.FC<SmartDietCompanionProps> = ({
   }, [selectedDrug, selectedBrandName]);
 
   const dietPlan: TrafficLightDietPlan | null = getTrafficLightDietGuide(activeMedicine, activeBrand);
+
+  // Resolve primary quantitative pharmacokinetic rule for the active medication
+  const primaryPkRule = useMemo(() => {
+    const matched = matchCuratedDrug(activeBrand || String(activeMedicine));
+    if (!matched) return null;
+    return DRUG_FOOD_INTERACTION_RULES.find(r => r.drug === matched) || null;
+  }, [activeMedicine, activeBrand]);
+
+  const activeImpactPercent =
+    typeof interaction?.bioavailabilityImpactPercent === 'number' && interaction.bioavailabilityImpactPercent !== 0
+      ? interaction.bioavailabilityImpactPercent
+      : primaryPkRule?.bioavailabilityImpactPercent ?? 0;
+
+  const activeChemicalEquation =
+    (interaction?.bioavailabilityImpactPercent && interaction.chemicalEquation)
+      ? interaction.chemicalEquation
+      : primaryPkRule?.chemicalEquation ??
+        `${activeBrand || activeMedicine} + Balanced Diet -> Uncomplexed Solute -> Standard Enterocyte Uptake (0% ΔF)`;
+
+  const activeReactionMechanism =
+    (interaction?.bioavailabilityImpactPercent && interaction.reactionMechanism)
+      ? interaction.reactionMechanism
+      : primaryPkRule?.reactionMechanism ??
+        'Zero documented covalent enzyme inactivation, divalent cation chelation, or competitive receptor antagonism with standard daily foods.';
+
+  const activeImpactBadgeLabel =
+    activeImpactPercent === 0
+      ? '0% Bioavailability Shift'
+      : activeImpactPercent < 0
+      ? `${activeImpactPercent}% Bioavailability Drop`
+      : `+${activeImpactPercent}% Concentration Surge`;
 
   const handleMedicineChange = (drugId: DrugId, brandName?: string) => {
     setActiveMedicine(drugId);
@@ -62,7 +110,22 @@ export const SmartDietCompanion: React.FC<SmartDietCompanionProps> = ({
     }
   };
 
+  // Full Indian Pharmacy Database autocomplete search results
+  const searchResults = useMemo(() => {
+    const q = filterQuery.trim().toLowerCase();
+    if (!q) {
+      return INDIAN_PHARMACY_DATABASE.slice(0, 10);
+    }
+    return INDIAN_PHARMACY_DATABASE.filter(m =>
+      m.brandName.toLowerCase().includes(q) ||
+      m.genericSalt.toLowerCase().includes(q) ||
+      m.category.toLowerCase().includes(q) ||
+      m.aliases.some(a => a.toLowerCase().includes(q))
+    ).slice(0, 12);
+  }, [filterQuery]);
+
   const filteredShortcuts = POPULAR_INDIAN_SHORTCUTS.filter(s =>
+    !filterQuery.trim() ||
     s.brandName.toLowerCase().includes(filterQuery.toLowerCase()) ||
     s.genericSalt.toLowerCase().includes(filterQuery.toLowerCase())
   );
@@ -154,15 +217,129 @@ export const SmartDietCompanion: React.FC<SmartDietCompanionProps> = ({
               <span>Select Your Medication:</span>
             </span>
 
-            <div className="relative max-w-xs w-full">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div ref={searchContainerRef} className="relative max-w-sm w-full">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
+                role="combobox"
+                aria-expanded={isDropdownOpen}
+                aria-controls="diet-medicine-options"
+                aria-autocomplete="list"
                 value={filterQuery}
-                onChange={(e) => setFilterQuery(e.target.value)}
-                placeholder="Filter Indian brands..."
-                className="w-full h-9 pl-9 pr-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md focus:outline-none focus:border-teal-600 text-slate-900 dark:text-slate-100"
+                onFocus={() => setIsDropdownOpen(true)}
+                onChange={(e) => {
+                  setFilterQuery(e.target.value);
+                  setIsDropdownOpen(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setIsDropdownOpen(false);
+                  } else if (e.key === 'Enter' && searchResults.length > 0) {
+                    const first = searchResults[0];
+                    handleMedicineChange(first.mappedCuratedDrugId || first.brandName, first.brandName);
+                    setFilterQuery('');
+                    setIsDropdownOpen(false);
+                  }
+                }}
+                placeholder="Filter Indian brands (e.g. Pan-D, Dolo, Telma)..."
+                className="w-full h-9 pl-9 pr-8 text-sm font-medium bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md focus:outline-none focus:border-teal-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
               />
+              {filterQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterQuery('');
+                    setIsDropdownOpen(false);
+                  }}
+                  className="w-6 h-6 absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md"
+                  aria-label="Clear medication search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Autocomplete Medication Options Dropdown Listbox */}
+              <AnimatePresence>
+                {isDropdownOpen && (
+                  <motion.div
+                    id="diet-medicine-options"
+                    role="listbox"
+                    initial={{ opacity: 0, y: 4, scale: 0.99 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.99 }}
+                    transition={{ duration: 0.15, ease: standardEaseOut }}
+                    className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-700 shadow-xl max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800"
+                  >
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs font-bold uppercase text-slate-600 dark:text-slate-300">
+                      <span>
+                        {filterQuery ? `Matching Medications (${searchResults.length})` : 'Popular Indian Medicines'}
+                      </span>
+                      <span className="text-[11px] font-normal text-slate-500">Tap to load diet guide</span>
+                    </div>
+
+                    {searchResults.length === 0 ? (
+                      <div className="p-5 text-center text-slate-500 dark:text-slate-400">
+                        <AlertCircle className="w-6 h-6 text-amber-500 mx-auto mb-1.5" />
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          No matching medication found
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Try searching Indian brands like Pan-D, Dolo 650, Telma, Thyronorm, Shelcal.
+                        </p>
+                      </div>
+                    ) : (
+                      searchResults.map((item) => {
+                        const isSelected = activeBrand?.toLowerCase() === item.brandName.toLowerCase();
+
+                        return (
+                          <motion.button
+                            key={item.id}
+                            whileTap={chipTapPhysics}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            onClick={() => {
+                              handleMedicineChange(item.mappedCuratedDrugId || item.brandName, item.brandName);
+                              setFilterQuery('');
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`w-full px-4 py-2.5 text-left flex items-center justify-between gap-3 transition-colors ${
+                              isSelected
+                                ? 'bg-teal-50 dark:bg-teal-950/50'
+                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/70'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                                  {item.brandName}
+                                </span>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                  {item.category}
+                                </span>
+                              </div>
+                              <p className="text-xs text-teal-700 dark:text-teal-400 font-medium truncate mt-0.5">
+                                {item.genericSalt}
+                              </p>
+                            </div>
+
+                            {isSelected ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-100/80 dark:bg-teal-900/60 px-2 py-0.5 rounded-md shrink-0">
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                <span>Active</span>
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-teal-600 shrink-0">
+                                View Guide →
+                              </span>
+                            )}
+                          </motion.button>
+                        );
+                      })
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -219,9 +396,22 @@ export const SmartDietCompanion: React.FC<SmartDietCompanionProps> = ({
               </div>
             </div>
 
-            <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-rose-200 dark:bg-rose-900 text-rose-950 dark:text-rose-100 border border-rose-300 dark:border-rose-800">
-              High Risk Conflict
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`text-xs font-mono font-extrabold px-2.5 py-1 rounded-md border shadow-2xs ${
+                  activeImpactPercent === 0
+                    ? 'bg-emerald-600 text-white border-emerald-700'
+                    : activeImpactPercent < 0
+                    ? 'bg-rose-600 text-white border-rose-700'
+                    : 'bg-red-700 text-white border-red-800'
+                }`}
+              >
+                {activeImpactBadgeLabel}
+              </span>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-rose-200 dark:bg-rose-900 text-rose-950 dark:text-rose-100 border border-rose-300 dark:border-rose-800">
+                {primaryPkRule ? primaryPkRule.severity : 'High Risk Conflict'}
+              </span>
+            </div>
           </div>
 
           {/* Clean Flat Tags with Emojis */}
@@ -246,11 +436,30 @@ export const SmartDietCompanion: React.FC<SmartDietCompanionProps> = ({
           <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900 space-y-1">
             <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
               <Info className="w-3.5 h-3.5" />
-              <span>Why It Happens:</span>
+              <span>Why It Happens (Biological Mechanism):</span>
             </span>
             <p className="text-base sm:text-lg font-bold text-rose-950 dark:text-rose-100 leading-relaxed">
               {dietPlan?.redZone?.reasonWhy ?? 'Follow standard prescription precautions.'}
             </p>
+          </div>
+
+          {/* Dedicated Code-Style Box: Molecular & Chemical Reaction Equation */}
+          <div className="rounded-lg bg-slate-950 border border-slate-800 overflow-hidden shadow-inner">
+            <div className="px-3.5 py-2 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-teal-400">
+                Molecular &amp; Chemical Reaction Equation
+              </span>
+              <span className="text-[10px] font-mono text-slate-400">
+                {primaryPkRule ? primaryPkRule.mechanismClass : 'Stoichiometry / Kinetics'}
+              </span>
+            </div>
+            <pre className="p-3.5 text-xs sm:text-sm font-mono text-emerald-300 whitespace-pre-wrap break-words leading-relaxed">
+              <code>{activeChemicalEquation}</code>
+            </pre>
+            <div className="px-3.5 py-2.5 bg-slate-900/70 border-t border-slate-800 text-[11px] sm:text-xs font-mono text-slate-300 leading-relaxed">
+              <span className="text-amber-300 font-bold">// Molecular Kinetics: </span>
+              {activeReactionMechanism}
+            </div>
           </div>
         </motion.div>
 

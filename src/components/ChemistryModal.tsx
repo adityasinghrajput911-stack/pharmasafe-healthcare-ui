@@ -68,6 +68,37 @@ export const ChemistryModal: React.FC<ChemistryModalProps> = ({
 
             {/* Content Body */}
             <div className="mt-4 space-y-3 text-left">
+              {/* Quantitative Bioavailability Impact & Chemical Equation */}
+              {(analysis?.bioavailabilityImpactSummary || analysis?.chemicalEquation || chem?.chemicalEquation) && (
+                <div className="p-3.5 rounded-lg bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300">
+                      Quantitative Pharmacokinetic Impact
+                    </span>
+                    {typeof (analysis?.bioavailabilityImpactPercent ?? chem?.bioavailabilityImpactPercent) === 'number' && (
+                      <span className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
+                        (analysis?.bioavailabilityImpactPercent ?? chem?.bioavailabilityImpactPercent ?? 0) === 0
+                          ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100'
+                          : 'bg-rose-100 text-rose-900 dark:bg-rose-900 dark:text-rose-100'
+                      }`}>
+                        {(analysis?.bioavailabilityImpactPercent ?? chem?.bioavailabilityImpactPercent ?? 0) > 0 ? '+' : ''}
+                        {analysis?.bioavailabilityImpactPercent ?? chem?.bioavailabilityImpactPercent}% ΔF
+                      </span>
+                    )}
+                  </div>
+                  {(analysis?.bioavailabilityImpactSummary || chem?.bioavailabilityImpactSummary) && (
+                    <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
+                      {analysis?.bioavailabilityImpactSummary || chem?.bioavailabilityImpactSummary}
+                    </div>
+                  )}
+                  {(analysis?.chemicalEquation || chem?.chemicalEquation) && (
+                    <div className="p-2.5 rounded bg-white dark:bg-slate-900 border border-teal-200/80 dark:border-teal-800/80 font-mono text-[11px] sm:text-xs text-slate-900 dark:text-teal-200 break-words">
+                      {analysis?.chemicalEquation || chem?.chemicalEquation}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Mechanism Class */}
               <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-1.5 mb-1 text-slate-700 dark:text-slate-300">
@@ -94,16 +125,16 @@ export const ChemistryModal: React.FC<ChemistryModalProps> = ({
                 </div>
               </div>
 
-              {/* Clinical Summary */}
-              <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-1.5 mb-1 text-slate-700 dark:text-slate-300">
+              {/* Molecular Reaction Kinetics & Clinical Summary */}
+              <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                   <Layers className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Clinical Chemical Summary
+                    Molecular Reaction Kinetics & Summary
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
-                  {chem?.chemicalSummary || analysis?.mechanismExplanation || 'No critical biochemical conflict detected.'}
+                  {analysis?.reactionMechanism || chem?.reactionMechanism || chem?.chemicalSummary || analysis?.mechanismExplanation || 'No critical biochemical conflict detected.'}
                 </p>
               </div>
 

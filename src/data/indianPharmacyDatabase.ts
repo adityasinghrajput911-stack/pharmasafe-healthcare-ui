@@ -748,13 +748,16 @@ export const POPULAR_INDIAN_SHORTCUTS: Array<{
   genericSalt: string;
   mappedDrugId: DrugId;
 }> = [
+  { label: 'Pan-D', brandName: 'Pan-D', genericSalt: 'Pantoprazole + Domperidone', mappedDrugId: 'Pantoprazole / Pan 40' as any },
   { label: 'Dolo 650', brandName: 'Dolo 650', genericSalt: 'Paracetamol', mappedDrugId: 'Paracetamol / Acetaminophen' },
   { label: 'Pan 40', brandName: 'Pan 40', genericSalt: 'Pantoprazole', mappedDrugId: 'Pan 40 (Pantoprazole)' },
-  { label: 'Glycomet', brandName: 'Glycomet', genericSalt: 'Metformin', mappedDrugId: 'Metformin' },
+  { label: 'Thyronorm', brandName: 'Thyronorm', genericSalt: 'Levothyroxine', mappedDrugId: 'Levothyroxine' },
   { label: 'Telma', brandName: 'Telma', genericSalt: 'Telmisartan', mappedDrugId: 'Lisinopril / Losartan' },
   { label: 'Storvas', brandName: 'Storvas', genericSalt: 'Atorvastatin', mappedDrugId: 'Atorvastatin' },
   { label: 'Shelcal 500', brandName: 'Shelcal', genericSalt: 'Calcium + Vit D3', mappedDrugId: 'Shelcal 500 (Calcium + Vit D3)' },
+  { label: 'Glycomet', brandName: 'Glycomet', genericSalt: 'Metformin', mappedDrugId: 'Metformin' },
   { label: 'Augmentin', brandName: 'Augmentin', genericSalt: 'Amoxicillin + Clavulanate', mappedDrugId: 'Augmentin 625 Duo' },
+  { label: 'Ecosprin', brandName: 'Ecosprin', genericSalt: 'Aspirin (75mg)', mappedDrugId: 'Ecosprin 75 (Aspirin)' as any },
   { label: 'Evion 400', brandName: 'Evion 400', genericSalt: 'Vitamin E', mappedDrugId: 'Evion 400 (Vitamin E)' }
 ];
 

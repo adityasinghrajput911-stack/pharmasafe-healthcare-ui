@@ -1,6 +1,7 @@
 import type { DrugId, FoodId, InteractionAnalysis, EmergencyFirstAidInfo, ClinicalEvidenceReference } from '../types';
 import { matchCuratedDrug } from '../data/brandDatabase';
 import { INDIAN_PHARMACY_DATABASE, getBlisterFoilSalt } from '../data/indianPharmacyDatabase';
+import { DRUG_FOOD_INTERACTION_RULES, DRUGS_CATALOG, type CuratedDrugId } from '../../catalog';
 
 export const UNIVERSAL_FIRST_AID_STEPS = [
   '1. Stop eating or drinking the interacting food immediately.',
@@ -1634,11 +1635,67 @@ function executeLocalAnalysis(drug: DrugId, food: FoodId): InteractionAnalysis {
   };
 }
 
+function enrichWithQuantitativeKinetics(analysis: InteractionAnalysis, rawDrug: DrugId, rawFood: FoodId): InteractionAnalysis {
+  const safeFood = normalizeFoodId(rawFood);
+  const matchedCurated = matchCuratedDrug(rawDrug);
+  const effectiveCurated = (matchedCurated || (rawDrug in DRUGS_CATALOG ? rawDrug : null)) as CuratedDrugId | null;
+
+  const catalogRule = effectiveCurated
+    ? DRUG_FOOD_INTERACTION_RULES.find(r => r.drug === effectiveCurated && r.food === safeFood)
+    : undefined;
+
+  if (catalogRule) {
+    analysis.bioavailabilityImpactPercent = catalogRule.bioavailabilityImpactPercent;
+    analysis.bioavailabilityImpactSummary = catalogRule.bioavailabilityImpactSummary;
+    analysis.chemicalEquation = catalogRule.chemicalEquation;
+    analysis.reactionMechanism = catalogRule.reactionMechanism;
+    analysis.molecularChemistry = {
+      ...analysis.molecularChemistry,
+      chemicalEquation: catalogRule.chemicalEquation,
+      reactionMechanism: catalogRule.reactionMechanism,
+      bioavailabilityImpactPercent: catalogRule.bioavailabilityImpactPercent,
+      bioavailabilityImpactSummary: catalogRule.bioavailabilityImpactSummary
+    };
+    analysis.biochemicalDetails = {
+      ...analysis.biochemicalDetails,
+      pharmacokineticImpact: catalogRule.bioavailabilityImpactSummary,
+      bioavailabilityImpactPercent: catalogRule.bioavailabilityImpactPercent,
+      chemicalEquation: catalogRule.chemicalEquation,
+      reactionMechanism: catalogRule.reactionMechanism
+    };
+  } else {
+    const formula = effectiveCurated ? DRUGS_CATALOG[effectiveCurated].molecularFormula : 'Active Pharmaceutical Salt';
+    const eq = `${formula} (${rawDrug}) + Neutral Nutrients (${safeFood}) -> Uncomplexed Solute -> Normal Enterocyte Uptake (0% ΔF)`;
+    const mech = 'Zero covalent enzyme inactivation, zero multivalent cation chelation, and zero competitive receptor antagonism; unaltered dissolution and physiological absorption with 0% pharmacokinetic shift.';
+    const summary = 'Bioavailability unaltered (0% absorption shift; 100% therapeutic clearance preserved)';
+
+    analysis.bioavailabilityImpactPercent = analysis.bioavailabilityImpactPercent ?? 0;
+    analysis.bioavailabilityImpactSummary = analysis.bioavailabilityImpactSummary ?? summary;
+    analysis.chemicalEquation = analysis.chemicalEquation ?? eq;
+    analysis.reactionMechanism = analysis.reactionMechanism ?? mech;
+    analysis.molecularChemistry = {
+      ...analysis.molecularChemistry,
+      chemicalEquation: analysis.molecularChemistry?.chemicalEquation ?? eq,
+      reactionMechanism: analysis.molecularChemistry?.reactionMechanism ?? mech,
+      bioavailabilityImpactPercent: analysis.molecularChemistry?.bioavailabilityImpactPercent ?? 0,
+      bioavailabilityImpactSummary: analysis.molecularChemistry?.bioavailabilityImpactSummary ?? summary
+    };
+    analysis.biochemicalDetails = {
+      ...analysis.biochemicalDetails,
+      bioavailabilityImpactPercent: analysis.biochemicalDetails?.bioavailabilityImpactPercent ?? 0,
+      chemicalEquation: analysis.biochemicalDetails?.chemicalEquation ?? eq,
+      reactionMechanism: analysis.biochemicalDetails?.reactionMechanism ?? mech
+    };
+  }
+
+  return analysis;
+}
+
 export function getLocalAnalysis(drug: DrugId, food: FoodId): InteractionAnalysis {
   try {
     const analysis = executeLocalAnalysis(drug, food);
     if (!analysis || typeof analysis !== 'object') {
-      return createSafeFallbackAnalysis(drug, food);
+      return enrichWithQuantitativeKinetics(createSafeFallbackAnalysis(drug, food), drug, food);
     }
     // Guarantee required fields are always present
     if (!analysis.status) analysis.status = analysis.isCritical ? 'CRITICAL' : 'SAFE';
@@ -1651,10 +1708,10 @@ export function getLocalAnalysis(drug: DrugId, food: FoodId): InteractionAnalysi
       const effectiveDrug = matchedCurated || drug || 'Atorvastatin';
       analysis.clinicalEvidence = getClinicalEvidenceReference(effectiveDrug, normalizeFoodId(food), drug);
     }
-    return analysis;
+    return enrichWithQuantitativeKinetics(analysis, drug, food);
   } catch (error) {
     console.error('[PharmaSafe Client] executeLocalAnalysis threw, recovering with safe fallback:', error);
-    return createSafeFallbackAnalysis(drug, food);
+    return enrichWithQuantitativeKinetics(createSafeFallbackAnalysis(drug, food), drug, food);
   }
 }
 

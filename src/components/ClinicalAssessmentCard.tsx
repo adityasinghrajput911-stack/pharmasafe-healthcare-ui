@@ -6,6 +6,7 @@ import {
   ShieldCheck, 
   Clock, 
   Printer, 
+  Download,
   Share2, 
   Check, 
   ChevronDown, 
@@ -25,6 +26,7 @@ import type { InteractionAnalysis } from '../types';
 import { ChemistryModal } from './ChemistryModal';
 import { InternetCrossCheck } from './InternetCrossCheck';
 import { getTrafficLightDietGuide } from '../data/trafficLightDietGuide';
+import { downloadSingleAssessmentReportPdf } from '../utils/pdfReportGenerator';
 import { 
   standardEaseOut, 
   editorialRevealContainer, 
@@ -46,6 +48,7 @@ export const ClinicalAssessmentCard: React.FC<ClinicalAssessmentCardProps> = ({
 }) => {
   const [showBiochemistry, setShowBiochemistry] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
   const [selectedAltIndex, setSelectedAltIndex] = useState<number | null>(null);
   const [isFirstAidExpanded, setIsFirstAidExpanded] = useState(false);
@@ -120,6 +123,12 @@ ${saferFoods.map(f => `• ${f.name} - ${f.rationale}`).join('\n')}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadReport = () => {
+    downloadSingleAssessmentReportPdf(analysis);
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 2500);
   };
 
   const handlePrint = () => {
@@ -213,7 +222,24 @@ ${saferFoods.map(f => `• ${f.name} - ${f.rationale}`).join('\n')}`;
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {typeof analysis?.bioavailabilityImpactPercent === 'number' && (
+              <span
+                className={`text-xs font-mono font-extrabold px-2.5 py-1 rounded tracking-wide border shadow-2xs ${
+                  analysis.bioavailabilityImpactPercent === 0
+                    ? 'bg-emerald-600 text-white border-emerald-700'
+                    : analysis.bioavailabilityImpactPercent < 0
+                    ? 'bg-rose-600 text-white border-rose-700'
+                    : 'bg-red-700 text-white border-red-800'
+                }`}
+              >
+                {analysis.bioavailabilityImpactPercent === 0
+                  ? '0% Bioavailability Shift'
+                  : analysis.bioavailabilityImpactPercent < 0
+                  ? `${analysis.bioavailabilityImpactPercent}% Bioavailability Drop`
+                  : `+${analysis.bioavailabilityImpactPercent}% Concentration Surge`}
+              </span>
+            )}
             <span className={`text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wide border ${
               bannerType === 'CRITICAL'
                 ? 'bg-red-100 text-red-900 border-red-300 dark:bg-red-900 dark:text-red-100 dark:border-red-800'
@@ -267,7 +293,18 @@ ${saferFoods.map(f => `• ${f.name} - ${f.rationale}`).join('\n')}`;
             </div>
 
             {/* Quick Action Tools */}
-            <div className="flex items-center gap-1.5 shrink-0 no-print">
+            <div className="flex flex-wrap items-center gap-1.5 shrink-0 no-print">
+              <motion.button
+                whileTap={tactileTapPhysics}
+                type="button"
+                onClick={handleDownloadReport}
+                className="min-h-[36px] px-3 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 border border-teal-800 rounded-md flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Download PDF report for printing"
+              >
+                {downloaded ? <Check className="w-3.5 h-3.5 text-white stroke-[2.5]" /> : <Download className="w-3.5 h-3.5 text-white" />}
+                <span>{downloaded ? 'Report Downloaded' : 'Download Report'}</span>
+              </motion.button>
+
               <motion.button
                 whileTap={tactileTapPhysics}
                 type="button"
@@ -302,6 +339,77 @@ ${saferFoods.map(f => `• ${f.name} - ${f.rationale}`).join('\n')}`;
               </motion.button>
             </div>
           </motion.div>
+
+          {/* Biological Mechanism + Dedicated Code-Style Molecular & Chemical Reaction Equation */}
+          {(analysis?.bioavailabilityImpactSummary || analysis?.chemicalEquation || analysis?.mechanismExplanation) && (
+            <motion.div
+              variants={editorialItem}
+              className="rounded-xl p-4 sm:p-5 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400 block">
+                    Biological Mechanism &amp; Quantitative Kinetics
+                  </span>
+                  <h5 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">
+                    {analysis?.mechanismTitle || 'Pharmacokinetic Interaction Pathway'}
+                  </h5>
+                </div>
+                {typeof analysis?.bioavailabilityImpactPercent === 'number' && (
+                  <span
+                    className={`px-2.5 py-1 rounded text-xs font-mono font-extrabold border ${
+                      analysis.bioavailabilityImpactPercent === 0
+                        ? 'bg-emerald-100 text-emerald-950 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-700'
+                        : analysis.bioavailabilityImpactPercent < 0
+                        ? 'bg-rose-600 text-white border-rose-700'
+                        : 'bg-red-700 text-white border-red-800'
+                    }`}
+                  >
+                    {analysis.bioavailabilityImpactPercent === 0
+                      ? '0% Bioavailability Shift'
+                      : analysis.bioavailabilityImpactPercent < 0
+                      ? `${analysis.bioavailabilityImpactPercent}% Bioavailability Drop`
+                      : `+${analysis.bioavailabilityImpactPercent}% Concentration Surge`}
+                  </span>
+                )}
+              </div>
+
+              {analysis?.mechanismExplanation && (
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {analysis.mechanismExplanation}
+                </p>
+              )}
+
+              {analysis?.bioavailabilityImpactSummary && (
+                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Quantitative Impact: <span className={analysis.bioavailabilityImpactPercent ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'}>{analysis.bioavailabilityImpactSummary}</span>
+                </p>
+              )}
+
+              {/* Dedicated Code-Style Box: Molecular & Chemical Reaction Equation */}
+              {analysis?.chemicalEquation && (
+                <div className="rounded-lg bg-slate-950 border border-slate-800 overflow-hidden shadow-inner">
+                  <div className="px-3.5 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-teal-400">
+                      Molecular &amp; Chemical Reaction Equation
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      Stoichiometry / Kinetics
+                    </span>
+                  </div>
+                  <pre className="p-3.5 text-xs sm:text-sm font-mono text-emerald-300 whitespace-pre-wrap break-words leading-relaxed">
+                    <code>{analysis.chemicalEquation}</code>
+                  </pre>
+                  {analysis?.reactionMechanism && (
+                    <div className="px-3.5 py-2.5 bg-slate-900/70 border-t border-slate-800 text-[11px] sm:text-xs font-mono text-slate-300 leading-relaxed">
+                      <span className="text-amber-300 font-bold">// Molecular Kinetics: </span>
+                      {analysis.reactionMechanism}
+                    </div>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* The 3-Tier Vertical Traffic Light Diet Guide */}
           <div className="space-y-4 pt-1">

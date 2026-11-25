@@ -46,6 +46,10 @@ export interface DrugClashAlert {
   plainExplanation: string;
   clinicalWhy: string;
   actionableFix: string;
+  bioavailabilityImpactPercent?: number;
+  bioavailabilityImpactSummary?: string;
+  chemicalEquation?: string;
+  reactionMechanism?: string;
 }
 
 export interface ScheduledPill {
@@ -67,6 +71,21 @@ export interface ScheduleSlot {
   pills: ScheduledPill[];
 }
 
+export interface MetabolicCompetitionSummary {
+  score: number; // 0-100 quantitative competition index
+  level: 'HIGH' | 'MODERATE' | 'LOW';
+  sharedPathways: string[];
+  delayedEliminationPercent: number;
+  headline: string;
+  clinicalNote: string;
+  competingPairs: Array<{
+    drugA: string;
+    drugB: string;
+    pathway: string;
+    delayNote: string;
+  }>;
+}
+
 export interface MultiMedicineAnalysisResult {
   hasClashes: boolean;
   maxSeverity: 'CRITICAL' | 'MODERATE' | 'SAFE';
@@ -75,6 +94,7 @@ export interface MultiMedicineAnalysisResult {
   schedule: ScheduleSlot[];
   overallHeadline: string;
   analyzedPills: PillItem[];
+  metabolicCompetition?: MetabolicCompetitionSummary;
 }
 
 export interface DrugInfo {
@@ -125,6 +145,10 @@ export interface MolecularChemistry {
   chemicalSummary: string;
   molecularFormulaDrug?: string;
   primaryActiveAgents?: string[];
+  chemicalEquation?: string;
+  reactionMechanism?: string;
+  bioavailabilityImpactPercent?: number;
+  bioavailabilityImpactSummary?: string;
 }
 
 export interface ClinicalEvidenceReference {
@@ -158,6 +182,10 @@ export interface InteractionAnalysis {
     | 'UNVERIFIED COMBINATION'
     | string;
   headline: string;
+  bioavailabilityImpactPercent?: number;
+  bioavailabilityImpactSummary?: string;
+  chemicalEquation?: string;
+  reactionMechanism?: string;
   mechanismTitle: string;
   mechanismExplanation: string;
   timingBuffer: TimingBuffer;
@@ -166,6 +194,9 @@ export interface InteractionAnalysis {
     molecularEvent: string;
     targetEnzymesOrReceptors: string;
     pharmacokineticImpact: string;
+    bioavailabilityImpactPercent?: number;
+    chemicalEquation?: string;
+    reactionMechanism?: string;
     clinicalConsequences: string[];
     onsetTime: string;
   };
@@ -187,12 +218,20 @@ export interface SymptomOtcMedicine {
   purpose: string;
   dosageAndTiming: string;
   linkedDrugId?: DrugId;
+  efficacyPercent: number;
+  efficacyRangeLabel: string;
+  onsetWindow: string;
+  clinicalMechanismNote: string;
 }
 
 export interface SymptomHomeRemedy {
   title: string;
   action: string;
   scienceRationale: string;
+  efficacyPercent: number;
+  efficacyRangeLabel?: string;
+  onsetWindow?: string;
+  efficacyMechanismSummary: string;
 }
 
 export interface SymptomEntry {
